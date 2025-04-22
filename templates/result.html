@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Prediction Result</title>
+  </head>
+  <body>
+    <h2>Prediction Result:</h2>
+    <p>{{ result }}</p>
+    {% if gfr %}
+    <p>eGFR: {{ gfr|round(1) }} ml/min/1.73m²</p>
+    <p>CKD Stage: {{ gfr_stage }}</p>
+    <p><strong>Advice:</strong> {{ advice }}</p>
+    {% endif %}
+    
+    <a href="/">Back</a>
+  </body>
+</html>
