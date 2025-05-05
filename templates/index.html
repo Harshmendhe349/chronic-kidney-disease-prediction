@@ -9,8 +9,8 @@
   <div class="container mt-5">
     <h2 class="text-center mb-4">Chronic Kidney Disease (CKD) Predictor</h2>
     <form action="/predict" method="POST" class="row g-3">
-      
-      <!-- Gender Input -->
+
+      <!-- Gender Input (Not part of features but needed for GFR) -->
       <div class="col-md-6">
         <label for="gender" class="form-label">Gender</label>
         <select name="gender" id="gender" class="form-select" required>
@@ -18,16 +18,7 @@
           <option value="male">Male</option>
         </select>
       </div>
-
-      <!-- Numeric Inputs -->
-      {% for field in ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot', 'hemo', 'pcv', 'wc', 'rc'] %}
-        <div class="col-md-6">
-          <label for="{{ field }}" class="form-label">{{ field.upper() }}</label>
-          <input type="number" step="any" name="{{ field }}" id="{{ field }}" class="form-control" required>
-        </div>
-      {% endfor %}
-
-      <!-- Categorical Dropdowns -->
+    
       {% set dropdowns = {
         'rbc': ['normal', 'abnormal'],
         'pc': ['normal', 'abnormal'],
@@ -40,23 +31,30 @@
         'pe': ['yes', 'no'],
         'ane': ['yes', 'no']
       } %}
-
-      {% for field, options in dropdowns.items() %}
+    
+      {% for field in features %}
         <div class="col-md-6">
           <label for="{{ field }}" class="form-label">{{ field.upper() }}</label>
-          <select name="{{ field }}" id="{{ field }}" class="form-select" required>
-            {% for option in options %}
-              <option value="{{ option }}">{{ option.capitalize() }}</option>
-            {% endfor %}
-          </select>
+    
+          {% if field in dropdowns %}
+            <select name="{{ field }}" id="{{ field }}" class="form-select">
+              {% for option in dropdowns[field] %}
+                <option value="{{ option }}">{{ option.capitalize() }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <input type="number" step="any" name="{{ field }}" id="{{ field }}" class="form-control">
+          {% endif %}
         </div>
       {% endfor %}
-
+    
       <!-- Submit Button -->
       <div class="col-12 text-center">
         <button type="submit" class="btn btn-primary px-4">Predict</button>
       </div>
     </form>
-  </div>
+    </div>
 </body>
 </html>
+
+
