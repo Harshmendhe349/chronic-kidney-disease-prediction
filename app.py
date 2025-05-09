@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')  # Set backend before importing pyplot
+from matplotlib import pyplot as plt
 from flask import Flask, render_template, request, send_file, json
 import numpy as np
 import joblib
@@ -209,7 +212,7 @@ def predict():
                             feature_names=features,
                             show=False)
             plt.savefig(shap_path, bbox_inches='tight')
-            plt.close()
+            plt.close('all')
         except Exception as e:
             print(f"SHAP Error: {str(e)}")
             shap_path = None

@@ -18,10 +18,9 @@ from sklearn.utils import shuffle
 from ctgan import CTGAN 
 import joblib
 
-# Load dataset
+# -------------------- Load and Clean Data --------------------
 df = pd.read_csv('kidney_disease.csv')
 
-# Data preprocessing
 def clean_data(df):
     df['classification'] = df['classification'].map({'ckd': 1, 'notckd': 0})
     df.replace(['\t?', '?'], np.nan, inplace=True)
@@ -40,19 +39,34 @@ def clean_data(df):
     return df
 
 df_clean = clean_data(df)
+df_clean = df_clean[df_clean['classification'].notna()]  # Remove rows with NaN in label
 
-# Feature engineering
-X = df_clean.drop(['id', 'classification'], axis=1)
-y = df_clean['classification']
+# -------------------- Save Real Test Set --------------------
+X_real = df_clean.drop(['id', 'classification'], axis=1)
+y_real = df_clean['classification']
 
-# Drop rows where target (y) is NaN
+X_train_real, X_test_real, y_train_real, y_test_real = train_test_split(
+    X_real, y_real, test_size=0.2, stratify=y_real, random_state=42
+)
+
+# Save real, untouched test set
+test_df = X_test_real.copy()
+test_df['classification'] = y_test_real
+test_df.to_csv("test_cases.csv", index=False)
+print("✅ Saved clean test set as 'test_cases.csv'")
+
+# -------------------- Start Augmented Training Pipeline --------------------
+# Use only X_train_real for synthetic augmentation
+X = X_train_real.copy()
+y = y_train_real.copy()
+
+# Drop NaNs in training labels
 mask = ~y.isna()
 X = X[mask]
 y = y[mask]
 
 # ------------------ CTGAN SYNTHETIC DATA GENERATION ------------------
-print("\nTraining CTGAN to generate synthetic samples...")
-
+print("\n🔁 Training CTGAN to generate synthetic CKD samples...")
 df_ctgan = X.copy()
 df_ctgan['classification'] = y
 df_ctgan_clean = df_ctgan.dropna()
@@ -68,37 +82,30 @@ df_augmented = shuffle(df_augmented, random_state=42)
 
 X = df_augmented.drop('classification', axis=1)
 y = df_augmented['classification']
-# ---------------------------------------------------------------------
 
-# Handle missing values
+# ------------------ Preprocessing Pipeline ------------------
 imputer = SimpleImputer(strategy='median')
 X = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
-# Handle class imbalance
 smote = SMOTE(random_state=42)
 X_res, y_res = smote.fit_resample(X, y)
 
-# Feature scaling
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X_res)
 
-# Feature selection using XGBoost
 xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
 selector = SelectFromModel(estimator=xgb, threshold='median')
 X_selected = selector.fit_transform(X_scaled, y_res)
-
 selected_features = X.columns[selector.get_support()]
-print(f"Selected features: {list(selected_features)}")
+print(f"✅ Selected features: {list(selected_features)}")
 
-# Train-test split
+# ------------------ Model Training ------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X_selected, y_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
-# Save preprocessed training data for explainability
 joblib.dump(X_train, 'X_train.pkl')
 
-# Model training with hyperparameter tuning
 models = {
     'XGBoost': {
         'model': XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
@@ -135,7 +142,7 @@ models = {
 
 best_models = {}
 for name, config in models.items():
-    print(f"\nTraining {name}...")
+    print(f"\n🔍 Training {name}...")
     grid = GridSearchCV(
         estimator=config['model'],
         param_grid=config['params'],
@@ -145,13 +152,13 @@ for name, config in models.items():
     )
     grid.fit(X_train, y_train)
     best_models[name] = grid.best_estimator_
-    print(f"Best params: {grid.best_params_}")
-    print(f"Best CV accuracy: {grid.best_score_:.2%}")
+    print(f"✅ Best params for {name}: {grid.best_params_}")
+    print(f"✅ Best CV accuracy: {grid.best_score_:.2%}")
 
-# Model evaluation
+# ------------------ Evaluation ------------------
 for name, model in best_models.items():
     y_pred = model.predict(X_test)
-    print(f"\n{name} Performance:")
+    print(f"\n📊 {name} Performance:")
     print(f"Test Accuracy: {accuracy_score(y_test, y_pred):.2%}")
     print(classification_report(y_test, y_pred))
     
@@ -161,7 +168,7 @@ for name, model in best_models.items():
     plt.title(f"{name} Confusion Matrix")
     plt.show()
 
-# Explainability with SHAP
+# ------------------ SHAP Explainability ------------------
 explainer = shap.TreeExplainer(best_models['XGBoost'])
 shap_values = explainer.shap_values(X_test)
 
@@ -172,7 +179,7 @@ plt.tight_layout()
 plt.savefig('shap_summary.png', bbox_inches='tight')
 plt.close()
 
-# Explainability with LIME
+# ------------------ LIME Explainability ------------------
 explainer_lime = lime_tabular.LimeTabularExplainer(
     training_data=X_train,
     feature_names=selected_features,
@@ -187,8 +194,10 @@ exp = explainer_lime.explain_instance(
 )
 exp.save_to_file('lime_explanation.html')
 
-# Save best model and preprocessors
+# ------------------ Save Final Artifacts ------------------
 joblib.dump(best_models['XGBoost'], 'best_ckd_model.pkl')
 joblib.dump(imputer, 'imputer.pkl')
 joblib.dump(scaler, 'scaler.pkl')
 joblib.dump(selector, 'selector.pkl')
+
+print("\n✅ Model training and saving completed successfully.")
