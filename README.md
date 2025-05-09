@@ -18,6 +18,7 @@ A robust machine learning pipeline for early detection and risk assessment of Ch
 
 ## Project Structure
 
+```bash
 ├── app.py # Flask web application
 ├── file1.py # Main training pipeline
 ├── test_model.py # Evaluation and threshold analysis
@@ -37,6 +38,7 @@ A robust machine learning pipeline for early detection and risk assessment of Ch
 │ ├── index.html # Web form for user input
 │ └── result.html # Results and explanations
 └── README.md # Project documentation
+```
 
 ---
 
@@ -46,8 +48,9 @@ A robust machine learning pipeline for early detection and risk assessment of Ch
 - pandas, numpy, scikit-learn, xgboost, lightgbm, catboost, imbalanced-learn, shap, lime, ctgan, flask, reportlab, matplotlib, joblib
 
 Install dependencies:
+```bash
 pip install -r requirements.txt
-
+```
 ---
 
 ## Data Pipeline
@@ -109,22 +112,25 @@ pip install -r requirements.txt
 ## Usage
 
 ### 1. **Training**
-
+```bash
 python file1.py
+```
 
 - Trains models, saves best artifacts, and generates plots.
 
 ### 2. **Testing/Evaluation**
-
+```bash
 python test_model.py
+```
 
 - Evaluates model on the real test set, generates calibration and threshold plots.
 
 ### 3. **Web App**
-
+```bash
 python app.py
+```
 
-- Runs the Flask app. Access via `http://localhost:5000/`.
+- Runs the Flask app. Access via <http://localhost:5000/>.
 
 ---
 
